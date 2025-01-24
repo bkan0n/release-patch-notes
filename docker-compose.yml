@@ -7,7 +7,7 @@ services:
     restart: unless-stopped
     environment:
       - APP_ID
-      - GITHUB_APP_SECRET
+      - APP_SECRET
       - WEBHOOK_SECRET
       - GENJIPK_WEBSITE_WEBHOOK_URL
       - GENJIPK_FRAMEWORK_WEBHOOK_URL
