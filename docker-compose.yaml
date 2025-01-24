@@ -1,0 +1,20 @@
+services:
+  webhook:
+    container_name: webhook
+    build:
+      context: .
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    environment:
+      - APP_ID
+      - GITHUB_APP_SECRET
+      - WEBHOOK_SECRET
+      - GENJIPK_WEBSITE_WEBHOOK_URL
+      - GENJIPK_FRAMEWORK_WEBHOOK_URL
+
+    networks:
+      - caddy-network
+
+networks:
+  caddy-network:
+    external: true
