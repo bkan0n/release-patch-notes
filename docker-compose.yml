@@ -11,10 +11,11 @@ services:
       - WEBHOOK_SECRET
       - GENJIPK_WEBSITE_WEBHOOK_URL
       - GENJIPK_FRAMEWORK_WEBHOOK_URL
-
     networks:
       - caddy-network
-
+    labels:
+      logging: "promtail"
+      logging_jobname: "containerlogs"
 networks:
   caddy-network:
     external: true
