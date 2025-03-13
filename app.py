@@ -104,21 +104,20 @@ async def handle_webhook(request: Request) -> Response:
                 {"error": "Invalid repo name"}, status_code=HTTP_400_BAD_REQUEST
             )
         messages = split_markdown_message(release_body)
-        messages = ["{ping}\n**{release_name}**\n"] + messages
-        for message in messages:
-            discord_payload = {"content": message}
-
-            async with httpx.AsyncClient() as client:
+        messages = [f"{ping}\n**{release_name}**\n"] + messages
+        async with httpx.AsyncClient() as client:
+            for message in messages:
+                discord_payload = {"content": message}
                 response = await client.post(webhook_url, json=discord_payload)
                 if response.status_code == 204:
                     logger.info("Successfully posted to Discord.")
-                    return Response({"status": "success"}, status_code=HTTP_200_OK)
                 else:
                     logger.error("Failed to post to Discord.")
                     return Response(
                         {"error": "Failed to post to Discord"},
                         status_code=HTTP_400_BAD_REQUEST,
                     )
+        return Response({"status": "success"}, status_code=HTTP_200_OK)
 
     logger.info("Unhandled event type: %s", event)
     return Response({"status": "ignored"}, status_code=HTTP_200_OK)
