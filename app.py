@@ -26,6 +26,36 @@ def verify_signature(secret: str, payload: bytes, signature: str) -> bool:
     )
     return hmac.compare_digest(computed_signature, signature)
 
+def split_markdown_message(text, limit=2000):
+    sections = text.split("\n\n")  # Split at double newlines for logical sections
+    messages = []
+    current_message = ""
+
+    for section in sections:
+        if len(section) + len(current_message) + 2 <= limit:  # +2 accounts for '\n\n' rejoining
+            current_message += section + "\n\n"  # Add section with spacing
+        else:
+            if current_message:  
+                messages.append(current_message.strip())  # Store the current chunk
+            if len(section) > limit:  # If a single section is too large, split further
+                sub_sections = section.split("\n")  
+                temp_message = ""
+                for line in sub_sections:
+                    if len(line) + len(temp_message) + 1 <= limit:  # +1 for newline
+                        temp_message += line + "\n"
+                    else:
+                        messages.append(temp_message.strip())
+                        temp_message = line + "\n"
+                if temp_message:
+                    messages.append(temp_message.strip())
+            else:
+                current_message = section + "\n\n"
+
+    if current_message.strip():  # Append any remaining content
+        messages.append(current_message.strip())
+
+    return messages
+
 
 @post("/webhook")
 async def handle_webhook(request: Request) -> Response:
@@ -73,22 +103,22 @@ async def handle_webhook(request: Request) -> Response:
             return Response(
                 {"error": "Invalid repo name"}, status_code=HTTP_400_BAD_REQUEST
             )
+        messages = split_markdown_message(release_body)
+        messages = ["{ping}\n**{release_name}**\n"] + messages
+        for message in messages:
+            discord_payload = {"content": message}
 
-        discord_payload = {
-            "content": f"{ping}\n**{release_name}**\n{release_body}"
-        }
-
-        async with httpx.AsyncClient() as client:
-            response = await client.post(webhook_url, json=discord_payload)
-            if response.status_code == 204:
-                logger.info("Successfully posted to Discord.")
-                return Response({"status": "success"}, status_code=HTTP_200_OK)
-            else:
-                logger.error("Failed to post to Discord.")
-                return Response(
-                    {"error": "Failed to post to Discord"},
-                    status_code=HTTP_400_BAD_REQUEST,
-                )
+            async with httpx.AsyncClient() as client:
+                response = await client.post(webhook_url, json=discord_payload)
+                if response.status_code == 204:
+                    logger.info("Successfully posted to Discord.")
+                    return Response({"status": "success"}, status_code=HTTP_200_OK)
+                else:
+                    logger.error("Failed to post to Discord.")
+                    return Response(
+                        {"error": "Failed to post to Discord"},
+                        status_code=HTTP_400_BAD_REQUEST,
+                    )
 
     logger.info("Unhandled event type: %s", event)
     return Response({"status": "ignored"}, status_code=HTTP_200_OK)
